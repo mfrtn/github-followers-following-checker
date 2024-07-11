@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GitHub Followers and Following Checker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    input, button {
+      padding: 10px;
+      margin: 5px 0;
+      width: 100%;
+    }
+    #output {
+      margin-top: 20px;
+    }
+    .list {
+      margin: 10px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>GitHub Followers and Following Checker</h1>
+  <input type="text" id="username" placeholder="Enter your GitHub username">
+  <button onclick="checkFollowersAndFollowing()">Check</button>
+
+  <div id="output">
+    <h2>Output</h2>
+    <div id="not-following-back" class="list"></div>
+    <div id="not-followed-back" class="list"></div>
+  </div>
+
+  <script>
+    const getGithubData = async (url) => {
+      const results = [];
+      let page = 1;
+      while (true) {
+        const response = await fetch(`${url}?per_page=100&page=${page}`);
+        const data = await response.json();
+        if (data.length === 0) break;
+        results.push(...data);
+        page += 1;
+      }
+      return results;
+    };
+
+    const getFollowers = async (username) => {
+      const url = `https://api.github.com/users/${username}/followers`;
+      const data = await getGithubData(url);
+      return data.map(user => user.login);
+    };
+
+    const getFollowing = async (username) => {
+      const url = `https://api.github.com/users/${username}/following`;
+      const data = await getGithubData(url);
+      return data.map(user => user.login);
+    };
+
+    const checkFollowersAndFollowing = async () => {
+      const username = document.getElementById('username').value;
+      if (!username) {
+        alert('Please enter your GitHub username');
+        return;
+      }
+      
+      document.getElementById('output').style.display = 'none';
+      try {
+        const followers = new Set(await getFollowers(username));
+        const following = new Set(await getFollowing(username));
+
+        const notFollowingBack = [...following].filter(user => !followers.has(user));
+        const notFollowedBack = [...followers].filter(user => !following.has(user));
+
+        document.getElementById('not-following-back').innerHTML = `<strong>Users you follow but don't follow you back:</strong><br>${notFollowingBack.join(', ')}`;
+        document.getElementById('not-followed-back').innerHTML = `<strong>Users who follow you but you don't follow back:</strong><br>${notFollowedBack.join(', ')}`;
+        
+        document.getElementById('output').style.display = 'block';
+      } catch (error) {
+        console.error('Error fetching data from GitHub:', error);
+        alert('Error fetching data from GitHub. Please try again.');
+      }
+    };
+  </script>
+</body>
+</html>
